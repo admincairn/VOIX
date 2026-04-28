@@ -1,0 +1,103 @@
+{
+  "profile": {
+    "companyName": "Acme Labs",
+    "website": "acmelabs.com",
+    "teamSize": "11-25"
+  },
+  "onboarding": {
+    "useCase": "pricing",
+    "proofSource": "written",
+    "widget": "carousel",
+    "completedAt": null
+  },
+  "testimonials": [
+    {
+      "id": "t-1",
+      "name": "Sophie Laurent",
+      "role": "Founder",
+      "company": "Payflux",
+      "email": "sophie@payflux.com",
+      "quote": "Tripled pricing-page conversion in 48 hours.",
+      "rating": 5,
+      "mode": "video",
+      "source": "video",
+      "status": "published",
+      "permissions": {
+        "site": true,
+        "social": true
+      },
+      "createdAt": "2 hours ago"
+    },
+    {
+      "id": "t-2",
+      "name": "Marcus King",
+      "role": "CEO",
+      "company": "Stacker AI",
+      "email": "marcus@stacker.ai",
+      "quote": "Collection time dropped from hours to minutes.",
+      "rating": 5,
+      "mode": "text",
+      "source": "written",
+      "status": "published",
+      "permissions": {
+        "site": true,
+        "social": false
+      },
+      "createdAt": "Yesterday"
+    },
+    {
+      "id": "t-3",
+      "name": "Julie Bernard",
+      "role": "Marketing Lead",
+      "company": "Docuflow",
+      "email": "julie@docuflow.com",
+      "quote": "Imported proof is ready for the pricing page refresh.",
+      "rating": 4,
+      "mode": "text",
+      "source": "import",
+      "status": "pending",
+      "permissions": {
+        "site": true,
+        "social": false
+      },
+      "createdAt": "Apr 20"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "carousel",
+      "name": "Pricing proof carousel",
+      "views": 6200,
+      "progress": 82
+    },
+    {
+      "id": "strip",
+      "name": "Hero quote strip",
+      "views": 4900,
+      "progress": 68
+    },
+    {
+      "id": "page",
+      "name": "Follow-up proof page",
+      "views": 3100,
+      "progress": 44
+    }
+  ],
+  "activities": [
+    {
+      "id": "a-1",
+      "label": "Sophie L. submitted a video testimonial",
+      "time": "2 hours ago"
+    },
+    {
+      "id": "a-2",
+      "label": "Pricing proof carousel crossed 6,000 views",
+      "time": "Yesterday"
+    },
+    {
+      "id": "a-3",
+      "label": "Imported proof is waiting for review",
+      "time": "Apr 20"
+    }
+  ]
+}

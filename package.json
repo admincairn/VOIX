@@ -2,25 +2,41 @@
   "name": "voix",
   "version": "0.1.0",
   "private": true,
+  "description": "Testimonial collection & display platform for the US market",
   "scripts": {
-    "dev": "next dev",
+    "dev":   "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint":  "next lint",
+    "type-check": "tsc --noEmit",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset"
   },
   "dependencies": {
-    "next": "16.2.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "next":                        "14.2.5",
+    "react":                       "^18.3.1",
+    "react-dom":                   "^18.3.1",
+    "next-auth":                   "^5.0.0-beta.19",
+    "@auth/supabase-adapter":      "^1.3.3",
+    "@supabase/supabase-js":       "^2.44.4",
+    "@lemonsqueezy/lemonsqueezy.js": "^3.2.0",
+    "resend":                      "^3.4.0",
+    "@react-email/components":     "^0.0.22",
+    "lucide-react":                "^0.383.0",
+    "clsx":                        "^2.1.1",
+    "tailwind-merge":              "^2.4.0",
+    "zod":                         "^3.23.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript":                  "^5.5.3",
+    "@types/node":                 "^20.14.11",
+    "@types/react":                "^18.3.3",
+    "@types/react-dom":            "^18.3.0",
+    "tailwindcss":                 "^3.4.6",
+    "postcss":                     "^8.4.39",
+    "autoprefixer":                "^10.4.19",
+    "eslint":                      "^8.57.0",
+    "eslint-config-next":          "14.2.5",
+    "@typescript-eslint/parser":   "^7.16.1"
   }
 }

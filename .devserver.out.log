@@ -1,0 +1,11 @@
+
+> voix@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.139.128.13:3000
+✓ Ready in 1861ms
+
+ GET /dashboard 200 in 1430ms (next.js: 561ms, application-code: 869ms)
+ GET /collect/acme-labs 200 in 1467ms (next.js: 811ms, application-code: 656ms)
