@@ -30,6 +30,70 @@ export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseService
   },
 })
 
+// ── Storage helpers ───────────────────────────────────────
+
+export const STORAGE_BUCKET_VIDEOS = 'videos'
+
+/**
+ * Upload a file to Supabase Storage
+ */
+export async function uploadVideo(
+  file: Buffer | ArrayBuffer,
+  filename: string,
+  contentType: string
+) {
+  const { data, error } = await supabaseAdmin.storage
+    .from(STORAGE_BUCKET_VIDEOS)
+    .upload(filename, file, {
+      contentType,
+      upsert: false,
+    })
+
+  if (error) {
+    console.error('[Supabase] Upload error:', error)
+    return { data: null, error }
+  }
+
+  // Get public URL
+  const { data: urlData } = supabaseAdmin.storage
+    .from(STORAGE_BUCKET_VIDEOS)
+    .getPublicUrl(data.path)
+
+  return {
+    data: {
+      path: data.path,
+      url: urlData.publicUrl,
+    },
+    error: null,
+  }
+}
+
+/**
+ * Get a signed URL for private video access (valid 24h)
+ */
+export async function getSignedVideoUrl(path: string) {
+  const { data, error } = await supabaseAdmin.storage
+    .from(STORAGE_BUCKET_VIDEOS)
+    .createSignedUrl(path, 86400)
+
+  if (error) {
+    return { data: null, error }
+  }
+
+  return { data: { url: data.signedUrl, expiresAt: data.expiresAt }, error: null }
+}
+
+/**
+ * Delete a video from storage
+ */
+export async function deleteVideo(path: string) {
+  const { error } = await supabaseAdmin.storage
+    .from(STORAGE_BUCKET_VIDEOS)
+    .remove([path])
+
+  return { error }
+}
+
 // ── Typed query helpers ───────────────────────────────────
 
 export async function getProfile(userId: string) {

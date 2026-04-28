@@ -6,7 +6,7 @@
 // No authentication required
 // ============================================================
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { CollectSubmitInput } from '@/types'
 
 interface CompanyInfo {
@@ -39,12 +39,19 @@ export function CollectForm({ token }: CollectFormProps) {
   const [rating, setRating]   = useState(0)
   const [content, setContent] = useState('')
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [videoUploading, setVideoUploading] = useState(false)
   const [consentDisplay, setConsentDisplay] = useState(false)
   const [consentSocial, setConsentSocial]   = useState(false)
   const [hoveredStar, setHoveredStar] = useState(0)
   const [submitting, setSubmitting]   = useState(false)
   const [recording, setRecording]     = useState(false)
   const [recSeconds, setRecSeconds]   = useState(0)
+
+  // MediaRecorder refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
+  const videoPreviewRef = useRef<HTMLDivElement>(null)
 
   // Fetch invite info
   useEffect(() => {
@@ -110,6 +117,148 @@ export function CollectForm({ token }: CollectFormProps) {
 
   function fmtTime(s: number) {
     return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+  }
+
+  // ── Video Recording ──────────────────────────────────────
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 1280, height: 720 },
+        audio: true,
+      })
+
+      // Store stream for cleanup
+      streamRef.current = stream
+
+      // Create preview
+      const videoEl = document.createElement('video')
+      videoEl.srcObject = stream
+      videoEl.autoplay = true
+      videoEl.muted = true
+      videoEl.style.cssText = 'width:100%;height:100%;object-fit:cover;transform:scaleX(-1);'
+
+      const previewEl = document.getElementById('video-preview')
+      if (previewEl) {
+        previewEl.innerHTML = ''
+        previewEl.appendChild(videoEl)
+      }
+
+      // Set up MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm',
+      })
+
+      chunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+        await uploadRecordedVideo()
+      }
+
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start(1000)
+      setRecording(true)
+      setVideoUrl(null)
+    } catch (err) {
+      console.error('Failed to start recording:', err)
+      alert('Could not access camera. Please allow camera access and try again.')
+    }
+  }
+
+  async function stopRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      setRecording(false)
+    }
+  }
+
+  async function uploadRecordedVideo() {
+    if (chunksRef.current.length === 0) return
+
+    setVideoUploading(true)
+
+    try {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+      const file = new File([blob], `testimonial-${Date.now()}.webm`, { type: 'video/webm' })
+
+      const formData = new FormData()
+      formData.append('video', file)
+
+      const res = await fetch('/api/upload/video', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      const data = await res.json()
+      setVideoUrl(data.videoUrl)
+
+      // Clear preview
+      const previewEl = document.getElementById('video-preview')
+      if (previewEl) {
+        previewEl.innerHTML = ''
+      }
+    } catch (err) {
+      console.error('Upload failed:', err)
+      alert(err instanceof Error ? err.message : 'Failed to upload video')
+    } finally {
+      setVideoUploading(false)
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo']
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Please upload MP4, WebM, MOV, or AVI.')
+      return
+    }
+
+    // Validate file size (100MB max)
+    if (file.size > 100 * 1024 * 1024) {
+      alert('File too large. Maximum size is 100MB.')
+      return
+    }
+
+    setVideoUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('video', file)
+
+      const res = await fetch('/api/upload/video', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      const data = await res.json()
+      setVideoUrl(data.videoUrl)
+    } catch (err) {
+      console.error('Upload failed:', err)
+      alert(err instanceof Error ? err.message : 'Failed to upload video')
+    } finally {
+      setVideoUploading(false)
+    }
   }
 
   // ── Loading state ───────────────────────────────────────
@@ -246,7 +395,7 @@ export function CollectForm({ token }: CollectFormProps) {
             <div className="flex flex-col gap-4">
               {/* Video zone */}
               <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-colors ${recording ? 'border-violet-400 bg-violet-50' : 'border-gray-200 bg-gray-50'}`}>
-                <div className="w-full aspect-video bg-gray-900 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+                <div id="video-preview" className="w-full aspect-video bg-gray-900 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
                   {recording ? (
                     <div className="text-white text-sm flex flex-col items-center gap-2">
                       <div className="flex items-center gap-2">
@@ -265,33 +414,22 @@ export function CollectForm({ token }: CollectFormProps) {
                 </div>
                 <div className="flex gap-2 justify-center">
                   <button
-                    onClick={async () => {
-                      if (recording) {
-                        // Stop recording and simulate video upload
-                        setRecording(false)
-
-                        // In production, you would:
-                        // 1. Stop the MediaRecorder
-                        // 2. Convert the blob to a file
-                        // 3. Upload to Supabase Storage or similar
-                        // 4. Get the public URL
-                        //
-                        // For now, we set a placeholder that would be replaced
-                        // with the actual uploaded video URL in production
-                        const timestamp = Date.now()
-                        setVideoUrl(`__VIDEO_PLACEHOLDER__${timestamp}`)
-                      } else {
-                        setRecording(true)
-                        setVideoUrl(null)
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${recording ? 'bg-red-500 text-white' : 'bg-gray-900 text-white'}`}
+                    onClick={recording ? stopRecording : startRecording}
+                    disabled={videoUploading}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${recording ? 'bg-red-500 text-white' : 'bg-gray-900 text-white'}`}
                   >
-                    {recording ? '■ Stop recording' : '● Start recording'}
+                    {videoUploading ? '⏳ Uploading...' : recording ? '■ Stop recording' : '● Start recording'}
                   </button>
-                  <button className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
-                    ↑ Upload video
-                  </button>
+                  <label className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                      onChange={handleFileUpload}
+                      disabled={videoUploading || recording}
+                      className="hidden"
+                    />
+                    {videoUploading ? '⏳ Uploading...' : '↑ Upload video'}
+                  </label>
                 </div>
               </div>
 

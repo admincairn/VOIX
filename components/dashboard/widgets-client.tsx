@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useState } from 'react'
-import { Plus, Copy, Check, Code2, Eye, BarChart2, Trash2 } from 'lucide-react'
+import { Plus, Copy, Check, Code2, Eye, BarChart2, Trash2, ExternalLink } from 'lucide-react'
 import type { Widget, WidgetType } from '@/types'
 
 const WIDGET_TYPES: { id: WidgetType; label: string; icon: string; desc: string }[] = [
@@ -27,6 +27,7 @@ interface Props {
 export function WidgetsClient({ widgets: initial, maxWidgets }: Props) {
   const [widgets, setWidgets]       = useState(initial)
   const [showCreate, setShowCreate] = useState(false)
+  const [previewWidget, setPreviewWidget] = useState<Widget | null>(null)
   const [copied, setCopied]         = useState<string | null>(null)
   const [creating, setCreating]     = useState(false)
 
@@ -130,6 +131,7 @@ export function WidgetsClient({ widgets: initial, maxWidgets }: Props) {
               copied={copied === widget.id}
               onCopy={() => copyEmbed(widget)}
               onDelete={() => deleteWidget(widget.id)}
+              onPreview={() => setPreviewWidget(widget)}
               embedSnippet={embedSnippet(widget.id)}
             />
           ))}
@@ -221,6 +223,14 @@ export function WidgetsClient({ widgets: initial, maxWidgets }: Props) {
           </div>
         </div>
       )}
+
+      {/* Preview modal */}
+      {previewWidget && (
+        <PreviewModal
+          widget={previewWidget}
+          onClose={() => setPreviewWidget(null)}
+        />
+      )}
     </div>
   )
 }
@@ -232,12 +242,14 @@ function WidgetCard({
   copied,
   onCopy,
   onDelete,
+  onPreview,
   embedSnippet,
 }: {
   widget: Widget
   copied: boolean
   onCopy: () => void
   onDelete: () => void
+  onPreview: () => void
   embedSnippet: string
 }) {
   const [showCode, setShowCode] = useState(false)
@@ -283,7 +295,10 @@ function WidgetCard({
               <Code2 size={12} />
               Embed
             </button>
-            <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-all">
+            <button
+              onClick={onPreview}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-all"
+            >
               <Eye size={12} />
               Preview
             </button>
@@ -329,6 +344,69 @@ function WidgetCard({
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Preview Modal ──────────────────────────────────────────
+
+function PreviewModal({ widget, onClose }: { widget: Widget; onClose: () => void }) {
+  const typeInfo = WIDGET_TYPES.find(t => t.id === widget.type)
+  const previewUrl = `${APP_URL}/api/widgets/${widget.id}/embed`
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-fade-up">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: `${widget.config.accentColor}18` }}
+            >
+              {typeInfo?.icon ?? '◈'}
+            </div>
+            <div>
+              <h3 className="font-bold text-sm">{widget.name}</h3>
+              <p className="text-xs text-gray-400 capitalize">
+                {widget.type} · {widget.config.theme} theme
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Preview iframe */}
+        <div className="relative bg-gray-100" style={{ height: '500px' }}>
+          <iframe
+            src={previewUrl}
+            className="w-full h-full border-0"
+            title={`Preview: ${widget.name}`}
+            sandbox="allow-scripts"
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            This is how your widget will appear on your website.
+          </p>
+          <a
+            href={previewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-700"
+          >
+            <ExternalLink size={12} />
+            Open in new tab
+          </a>
+        </div>
       </div>
     </div>
   )

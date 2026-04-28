@@ -111,6 +111,7 @@ export async function GET(req: NextRequest) {
     { data: prevPeriodT },
     { data: widgets },
     { data: sources },
+    { data: campaigns },
   ] = await Promise.all([
     // All testimonials (for ratings distribution + totals)
     supabaseAdmin
@@ -146,6 +147,12 @@ export async function GET(req: NextRequest) {
       .from('testimonials')
       .select('source')
       .eq('profile_id', userId),
+
+    // Campaigns for response rate calculation
+    supabaseAdmin
+      .from('campaigns')
+      .select('sent_count, response_count')
+      .eq('profile_id', userId),
   ])
 
   const all = allTestimonials ?? []
@@ -161,6 +168,11 @@ export async function GET(req: NextRequest) {
     : 0
 
   const totalViews = (widgets ?? []).reduce((s, w) => s + (w.view_count ?? 0), 0)
+
+  // Calculate response rate from campaigns
+  const totalSent = (campaigns ?? []).reduce((s, c) => s + (c.sent_count ?? 0), 0)
+  const totalResponses = (campaigns ?? []).reduce((s, c) => s + (c.response_count ?? 0), 0)
+  const responseRate = totalSent > 0 ? Math.round((totalResponses / totalSent) * 100) : 0
 
   const testimonialsCurrentCount = curr.length
   const testimonialsPrevCount    = prev.length
@@ -232,7 +244,7 @@ export async function GET(req: NextRequest) {
       pending,
       total_views: totalViews,
       avg_rating: avgRating,
-      response_rate: 0,         // TODO: link to campaigns
+      response_rate: responseRate,
       testimonials_delta: testimonialsDelta,
       views_delta: 0,
       rating_delta: 0,
