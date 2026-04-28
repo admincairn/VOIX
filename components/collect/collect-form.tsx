@@ -265,10 +265,21 @@ export function CollectForm({ token }: CollectFormProps) {
                 </div>
                 <div className="flex gap-2 justify-center">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (recording) {
+                        // Stop recording and simulate video upload
                         setRecording(false)
-                        setVideoUrl('https://example.com/mock-video.mp4')
+
+                        // In production, you would:
+                        // 1. Stop the MediaRecorder
+                        // 2. Convert the blob to a file
+                        // 3. Upload to Supabase Storage or similar
+                        // 4. Get the public URL
+                        //
+                        // For now, we set a placeholder that would be replaced
+                        // with the actual uploaded video URL in production
+                        const timestamp = Date.now()
+                        setVideoUrl(`__VIDEO_PLACEHOLDER__${timestamp}`)
                       } else {
                         setRecording(true)
                         setVideoUrl(null)
