@@ -146,33 +146,6 @@ export async function POST(req: NextRequest, { params }: Params) {
   )
 }
 
-// ── POST /api/collect/[token]/upload — handle video upload ─
-// Note: This is a simplified implementation. In production, you would:
-// 1. Upload to Supabase Storage
-// 2. Generate thumbnails
-// 3. Extract video duration
-// 4. Return proper URLs
-
-export async function POST(req: NextRequest, { params }: Params) {
-  try {
-    // For now, return mock data since we don't have storage configured
-    // In a real implementation, you would process the actual uploaded file
-
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Return mock video data - replace with actual upload logic
-    return NextResponse.json({
-      videoUrl: 'https://example.com/uploads/testimonial.webm',
-      videoDuration: 30, // seconds
-      videoThumbnailUrl: 'https://example.com/uploads/testimonial-thumb.jpg'
-    }, { status: 200 })
-  } catch (error) {
-    console.error('[Collect Upload] Video upload failed:', error)
-    return NextResponse.json({ error: 'Video upload failed' }, { status: 500 })
-  }
-}
-
 // ── GET /api/collect/[token] — validate token for the form ─
 
 export async function GET(_req: NextRequest, { params }: Params) {

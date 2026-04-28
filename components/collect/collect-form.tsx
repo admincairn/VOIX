@@ -45,12 +45,6 @@ export function CollectForm({ token }: CollectFormProps) {
   const [submitting, setSubmitting]   = useState(false)
   const [recording, setRecording]     = useState(false)
   const [recSeconds, setRecSeconds]   = useState(0)
-  // Video handling state
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
-  const [videoChunks, setVideoChunks] = useState<Blob[]>([])
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
-  const [videoDuration, setVideoDuration] = useState<number | null>(null)
-  const [videoThumbnailUrl, setVideoThumbnailUrl] = useState<string | null>(null)
 
   // Fetch invite info
   useEffect(() => {
@@ -68,78 +62,16 @@ export function CollectForm({ token }: CollectFormProps) {
       .finally(() => setLoading(false))
   }, [token])
 
-  // Video recording and handling
+  // Recording timer
   useEffect(() => {
     let int: ReturnType<typeof setInterval>
-    if (recording && mediaRecorder) {
+    if (recording) {
       int = setInterval(() => setRecSeconds(s => s + 1), 1000)
-    } else if (!recording) {
+    } else {
       setRecSeconds(0)
     }
     return () => clearInterval(int)
-  }, [recording, mediaRecorder])
-
-  // Handle video data availability
-  useEffect(() => {
-    if (mediaRecorder) {
-      const handleDataAvailable = (event: BlobEvent) => {
-        if (event.data && event.data.size > 0) {
-          setVideoChunks(prev => [...prev, event.data])
-        }
-      }
-
-      mediaRecorder.addEventListener('dataavailable', handleDataAvailable)
-      return () => {
-        mediaRecorder.removeEventListener('dataavailable', handleDataAvailable)
-      }
-    }
-  }, [mediaRecorder])
-
-  // Handle recording stop
-  useEffect(() => {
-    if (!recording && mediaRecorder && videoChunks.length > 0) {
-      const handleStop = async () => {
-        const blob = new Blob(videoChunks, { type: 'video/webm' })
-        setVideoChunks([])
-
-        // Create preview URL
-        const previewUrl = URL.createObjectURL(blob)
-        setVideoPreviewUrl(previewUrl)
-
-        // Upload to storage and get final URL
-        try {
-          const formData = new FormData()
-          formData.append('video', blob, 'testimonial.webm')
-
-          const uploadResponse = await fetch(`/api/collect/${token}/upload`, {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!uploadResponse.ok) {
-            throw new Error('Video upload failed')
-          }
-
-          const { videoUrl, videoDuration, videoThumbnailUrl } = await uploadResponse.json()
-          setVideoUrl(videoUrl)
-          // Store duration and thumbnail for submission
-          setVideoDuration(videoDuration ?? null)
-          setVideoThumbnailUrl(videoThumbnailUrl ?? null)
-        } catch (err) {
-          console.error('Video upload error:', err)
-          // Fallback to blob URL if upload fails
-          setVideoUrl(previewUrl)
-          setVideoDuration(null)
-          setVideoThumbnailUrl(null)
-        }
-      }
-
-      mediaRecorder.addEventListener('stop', handleStop)
-      return () => {
-        mediaRecorder.removeEventListener('stop', handleStop)
-      }
-    }
-  }, [recording, mediaRecorder, videoChunks.length, token])
+  }, [recording])
 
   async function handleSubmit() {
     if (!consentDisplay) return
@@ -153,8 +85,6 @@ export function CollectForm({ token }: CollectFormProps) {
         content:          content.trim(),
         rating:           rating || 5,
         video_url:        videoUrl ?? undefined,
-        video_duration:   videoDuration ?? undefined,
-        video_thumbnail_url: videoThumbnailUrl ?? undefined,
         consent_display:  consentDisplay,
         consent_social:   consentSocial,
       }
@@ -168,11 +98,6 @@ export function CollectForm({ token }: CollectFormProps) {
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error ?? 'Submission failed')
-      }
-
-      // Clean up blob URLs
-      if (videoPreviewUrl) {
-        URL.revokeObjectURL(videoPreviewUrl)
       }
 
       setDone(true)
@@ -329,24 +254,8 @@ export function CollectForm({ token }: CollectFormProps) {
                         <span className="font-mono text-red-400 font-bold">REC {fmtTime(recSeconds)}</span>
                       </div>
                     </div>
-                  ) : videoPreviewUrl ? (
-                    <video
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover"
-                      src={videoPreviewUrl}
-                    />
                   ) : videoUrl ? (
-                    <video
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover"
-                      src={videoUrl}
-                    />
+                    <div className="text-green-400 text-sm font-medium">✓ Recording saved ({fmtTime(recSeconds)})</div>
                   ) : (
                     <div className="text-gray-500 text-sm text-center">
                       <div className="text-3xl mb-2 opacity-40">▶</div>
@@ -356,34 +265,23 @@ export function CollectForm({ token }: CollectFormProps) {
                 </div>
                 <div className="flex gap-2 justify-center">
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       if (recording) {
-                        await stopRecording()
+                        setRecording(false)
+                        setVideoUrl('https://example.com/mock-video.mp4')
                       } else {
-                        await startRecording()
+                        setRecording(true)
+                        setVideoUrl(null)
                       }
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${recording ? 'bg-red-500 text-white' : 'bg-gray-900 text-white'}`}
                   >
                     {recording ? '■ Stop recording' : '● Start recording'}
                   </button>
-                  <button
-                    onClick={() => {
-                      // Handle upload (simplified for now)
-                      alert('Upload functionality would open file picker here')
-                    }}
-                    className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
-                  >
+                  <button className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
                     ↑ Upload video
                   </button>
                 </div>
-
-                {/* Video duration info when not recording */}
-                {!recording && (videoPreviewUrl || videoUrl) && (
-                  <div className="mt-2 text-xs text-green-600">
-                    ✓ Video ready ({fmtTime(videoDuration ?? 0)})
-                  </div>
-                )}
               </div>
 
               <div className="flex items-center gap-3 text-xs text-gray-400">

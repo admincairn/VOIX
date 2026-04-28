@@ -305,7 +305,6 @@ export interface CollectSubmitInput {
   rating: number
   video_url?: string
   video_duration?: number
-  video_thumbnail_url?: string
   consent_display: boolean
   consent_social?: boolean
 }
