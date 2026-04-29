@@ -8,7 +8,6 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const PUBLIC_ROUTES = [
-  '/',
   '/auth/signin',
   '/auth/signup',
   '/auth/error',
