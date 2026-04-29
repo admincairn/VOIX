@@ -5,30 +5,43 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './supabase.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Lazy initialization to support Edge Runtime
+function getSupabaseConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('[Voix] Missing Supabase environment variables')
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('[Voix] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+  }
+
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceKey: supabaseServiceKey ?? supabaseAnonKey }
 }
 
 // ── Browser client (anon key, respects RLS) ──────────────
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-})
+export const supabase = createClient<Database>(
+  getSupabaseConfig().supabaseUrl,
+  getSupabaseConfig().supabaseAnonKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  }
+)
 
 // ── Server client (service role — bypasses RLS) ───────────
 // Use ONLY in trusted server contexts (API routes, webhooks)
-export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+export const supabaseAdmin = createClient<Database>(
+  getSupabaseConfig().supabaseUrl,
+  getSupabaseConfig().supabaseServiceKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+)
 
 // ── Storage helpers ───────────────────────────────────────
 
