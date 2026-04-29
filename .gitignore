@@ -35,3 +35,30 @@ next-env.d.ts
 
 # supabase
 .supabase/
+
+# Archives lourdes
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Fichiers médias lourds
+*.mp4
+*.mov
+*.psd
+*.ai
+*.sketch
+
+# Dossiers de build / dépendances
+node_modules/
+.next/
+out/
+dist/
+
+# Environnement
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*

@@ -5,22 +5,17 @@
 
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
-import { getDashboardMetrics, supabaseAdmin } from "@/lib/supabase";
+import { getDashboardMetrics, supabaseAdmin } from "@/lib/supabase/server";
 import { MetricsGrid } from "@/components/dashboard/metrics-grid";
 import { TestimonialTable } from "@/components/dashboard/testimonial-table";
 import { WidgetsPanel } from "@/components/dashboard/widgets-panel";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { MetricsSkeleton } from "@/components/dashboard/skeletons";
-import { OnboardingSuccessBanner } from "@/components/dashboard/onboarding-success-banner";
 import type { Testimonial, Widget, Activity } from "@/types";
 
 export const metadata = { title: "Dashboard" };
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { onboarding?: string };
-}) {
+export default async function DashboardPage() {
   const session = await auth();
   const userId = session!.user.id;
 
@@ -52,13 +47,8 @@ export default async function DashboardPage({
       .limit(10),
   ]);
 
-  const showOnboardingSuccess = searchParams?.onboarding === "complete";
-
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Onboarding Success Banner ── */}
-      {showOnboardingSuccess && <OnboardingSuccessBanner />}
-
       {/* ── KPI Cards ── */}
       <Suspense fallback={<MetricsSkeleton />}>
         <MetricsGrid metrics={metrics} />
