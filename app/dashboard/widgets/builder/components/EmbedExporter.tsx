@@ -3,37 +3,32 @@
 // Modal to copy embed code
 // ============================================================
 
-"use client";
+'use client'
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Code, ExternalLink } from "lucide-react";
-import type { WidgetConfig } from "../page";
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Copy, Check, Code, ExternalLink } from 'lucide-react'
+import type { WidgetConfig } from '../page'
 
 interface Props {
-  config: WidgetConfig;
-  onClose: () => void;
+  config: WidgetConfig
+  onClose: () => void
 }
 
 export function EmbedExporter({ config, onClose }: Props) {
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"html" | "react" | "vue">("html");
+  const [copied, setCopied] = useState(false)
+  const [activeTab, setActiveTab] = useState<'html' | 'react' | 'vue'>('html')
 
-  const widgetId = "demo-widget-id"; // Remplacer par l'ID réel du widget sauvegardé
+  const widgetId = 'demo-widget-id'
 
-  const embedCodes = {
-    html: `<!-- VOIX Widget -->
+  const getEmbedCode = (tab: 'html' | 'react' | 'vue'): string => {
+    if (tab === 'html') {
+      return `<!-- VOIX Widget -->
 <div id="voix-widget-${widgetId}"></div>
-<script 
-  src="https://voix.app/api/widgets/${widgetId}/embed" 
-  async 
-  data-config='${JSON.stringify({
-    theme: config.theme,
-    accentColor: config.accentColor,
-    maxItems: config.maxItems,
-  })}'
-></script>`,
-    react: `import { VoixWidget } from '@voix/react';
+<script src="https://voix.app/api/widgets/${widgetId}/embed" async></script>`
+    }
+    if (tab === 'react') {
+      return `import { VoixWidget } from '@voix/react';
 
 function App() {
   return (
@@ -44,8 +39,9 @@ function App() {
       maxItems={${config.maxItems}}
     />
   );
-}`,
-    vue: `<template>
+}`
+    }
+    return `<template>
   <VoixWidget 
     widget-id="${widgetId}"
     theme="${config.theme}"
@@ -56,14 +52,14 @@ function App() {
 
 <script setup>
 import { VoixWidget } from '@voix/vue'
-</script>`,
-  };
+</script>`
+  }
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(embedCodes[activeTab]);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    navigator.clipboard.writeText(getEmbedCode(activeTab))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <AnimatePresence>
@@ -78,7 +74,7 @@ import { VoixWidget } from '@voix/vue'
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
           className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
         >
           {/* Header */}
@@ -89,9 +85,7 @@ import { VoixWidget } from '@voix/vue'
               </div>
               <div>
                 <h3 className="text-white font-semibold">Exporter le widget</h3>
-                <p className="text-white/40 text-sm">
-                  Copiez le code d'intégration
-                </p>
+                <p className="text-white/40 text-sm">Copiez le code d&apos;intégration</p>
               </div>
             </div>
             <button
@@ -104,14 +98,14 @@ import { VoixWidget } from '@voix/vue'
 
           {/* Tabs */}
           <div className="flex border-b border-white/5">
-            {(["html", "react", "vue"] as const).map((tab) => (
+            {(['html', 'react', 'vue'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-3 text-sm font-medium capitalize transition-all ${
                   activeTab === tab
-                    ? "text-indigo-400 border-b-2 border-indigo-500"
-                    : "text-white/30 hover:text-white/50"
+                    ? 'text-indigo-400 border-b-2 border-indigo-500'
+                    : 'text-white/30 hover:text-white/50'
                 }`}
               >
                 {tab}
@@ -123,23 +117,19 @@ import { VoixWidget } from '@voix/vue'
           <div className="p-6 space-y-4">
             <div className="relative">
               <pre className="bg-slate-950 border border-white/5 rounded-xl p-4 overflow-x-auto text-sm text-white/70 font-mono leading-relaxed">
-                <code>{embedCodes[activeTab]}</code>
+                <code>{getEmbedCode(activeTab)}</code>
               </pre>
               <button
                 onClick={handleCopy}
                 className="absolute top-3 right-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white/70 transition-all"
               >
-                {copied ? (
-                  <Check className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
 
             <div className="flex items-center gap-2 text-white/20 text-xs">
               <ExternalLink className="w-3 h-3" />
-              <span>Le script utilise Shadow DOM pour l'isolation CSS</span>
+              <span>Le script utilise Shadow DOM pour l&apos;isolation CSS</span>
             </div>
           </div>
 
@@ -171,5 +161,5 @@ import { VoixWidget } from '@voix/vue'
         </motion.div>
       </motion.div>
     </AnimatePresence>
-  );
+  )
 }

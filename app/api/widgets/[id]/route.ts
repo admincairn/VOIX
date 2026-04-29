@@ -1,119 +1,113 @@
 // ============================================================
-// VOIX — Widget API by ID
-// GET/PATCH/DELETE /api/widgets/[id]
+// VOIX — Widget API — GET/PATCH /api/widgets/[id]
+// Get or update a specific widget
 // ============================================================
 
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { supabaseAdmin } from '@/lib/supabase'
+import { auth } from "@/lib/auth";
+import { supabaseAdminUntyped } from "@/lib/supabase";
+import { NextResponse } from "next/server";
 
+// GET — Récupérer un widget
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth()
+  const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('widgets')
-    .select('*')
-    .eq('id', params.id)
-    .eq('profile_id', session.user.id)
-    .single()
+  const { id } = await params;
 
-  if (error || !data) {
-    return NextResponse.json({ error: 'Widget not found' }, { status: 404 })
-  }
-
-  return NextResponse.json({ data })
-}
-
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Verify ownership
-  const { data: existing } = await supabaseAdmin
-    .from('widgets')
-    .select('id')
-    .eq('id', params.id)
-    .eq('profile_id', session.user.id)
-    .single()
-
-  if (!existing) {
-    return NextResponse.json({ error: 'Widget not found' }, { status: 404 })
-  }
-
-  let body: Record<string, unknown>
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
+    const { data: widget, error } = await supabaseAdminUntyped
+      .from("widgets")
+      .select("*")
+      .eq("id", id)
+      .eq("profile_id", session.user.id)
+      .single();
 
-  // Filter allowed fields
-  const allowedFields = ['name', 'type', 'config', 'filters']
-  const updateData: Record<string, unknown> = {}
-  for (const field of allowedFields) {
-    if (field in body) {
-      updateData[field] = body[field]
+    if (error) throw error;
+    if (!widget) {
+      return NextResponse.json({ error: "Widget not found" }, { status: 404 });
     }
+
+    return NextResponse.json({ success: true, widget });
+  } catch (error) {
+    console.error("Widget fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch widget" },
+      { status: 500 },
+    );
   }
-
-  if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: 'No valid fields to update' }, { status: 422 })
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from('widgets')
-    .update(updateData)
-    .eq('id', params.id)
-    .select()
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ data })
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
+// PATCH — Mettre à jour un widget
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth()
+  const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify ownership before delete
-  const { data: existing } = await supabaseAdmin
-    .from('widgets')
-    .select('id')
-    .eq('id', params.id)
-    .eq('profile_id', session.user.id)
-    .single()
+  const { id } = await params;
+  const body = await req.json();
 
-  if (!existing) {
-    return NextResponse.json({ error: 'Widget not found' }, { status: 404 })
+  try {
+    // Vérifier que le widget appartient à l'utilisateur
+    const { data: existing, error: checkError } = await supabaseAdminUntyped
+      .from("widgets")
+      .select("id")
+      .eq("id", id)
+      .eq("profile_id", session.user.id)
+      .single();
+
+    if (checkError || !existing) {
+      return NextResponse.json(
+        { error: "Widget not found or unauthorized" },
+        { status: 404 },
+      );
+    }
+
+    const { data: widget, error } = await supabaseAdminUntyped
+      .from("widgets")
+      .update({
+        name: body.name,
+        type: body.type,
+        config: {
+          theme: body.theme,
+          accentColor: body.accentColor,
+          backgroundColor: body.backgroundColor,
+          textColor: body.textColor,
+          borderRadius: body.borderRadius,
+          spacing: body.spacing,
+          maxItems: body.maxItems,
+          showRating: body.showRating,
+          showSource: body.showSource,
+          showAvatar: body.showAvatar,
+          showDate: body.showDate,
+          autoplay: body.autoplay,
+          autoplayInterval: body.autoplayInterval,
+          fontFamily: body.fontFamily,
+          cardStyle: body.cardStyle,
+          animation: body.animation,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, widget });
+  } catch (error) {
+    console.error("Widget update error:", error);
+    return NextResponse.json(
+      { error: "Failed to update widget" },
+      { status: 500 },
+    );
   }
-
-  const { error } = await supabaseAdmin
-    .from('widgets')
-    .delete()
-    .eq('id', params.id)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
 }
