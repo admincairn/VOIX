@@ -52,7 +52,7 @@ export const supabaseAdmin = createClient<Database>(
 
 // ── Untyped server client (for tables with type issues) ───
 // Use when Database types are incomplete or missing tables
-const supabaseAdminUntyped = createClient(
+export const supabaseAdminUntyped = createClient(
   getSupabaseConfig().supabaseUrl,
   getSupabaseConfig().supabaseServiceKey,
   {
