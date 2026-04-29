@@ -1,184 +1,233 @@
-'use client'
-
 // ============================================================
 // VOIX — Sign In Page
-// /auth/signin
+// Premium authentication with social + magic link
 // ============================================================
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
-import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+"use client";
 
-export default function SignInPage() {
-  const searchParams = useSearchParams()
-  const router       = useRouter()
-  const callbackUrl  = searchParams.get('callbackUrl') ?? '/'
-  const errorParam   = searchParams.get('error')
+import { useState, Suspense } from "react";
+import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Chrome,
+  Github,
+  Mail,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading]   = useState<'google' | 'email' | null>(null)
-  const [error, setError]       = useState<string | null>(
-    errorParam === 'OAuthAccountNotLinked'
-      ? 'This email is already registered with a different sign-in method.'
-      : errorParam
-      ? 'Authentication failed. Please try again.'
-      : null
-  )
+function SignInForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const error = searchParams.get("error");
 
-  async function handleGoogle() {
-    setLoading('google')
-    setError(null)
-    await signIn('google', { callbackUrl })
-  }
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  async function handleEmail(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email || !password) return
+  const handleSocialSignIn = async (provider: string) => {
+    setIsLoading(provider);
+    await signIn(provider, { callbackUrl });
+  };
 
-    setLoading('email')
-    setError(null)
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
 
-    const result = await signIn('credentials', {
-      email:       email.trim().toLowerCase(),
-      password,
-      redirect:    false,
-      callbackUrl,
-    })
+    setIsLoading("magic");
+    await signIn("email", { email, callbackUrl });
+    setMagicLinkSent(true);
+    setIsLoading(null);
+  };
 
-    if (result?.error) {
-      setError('Invalid email or password.')
-      setLoading(null)
-    } else if (result?.ok) {
-      router.push(callbackUrl)
-    }
-  }
+  const errorMessages: Record<string, string> = {
+    OAuthSignin: "Erreur lors de la connexion OAuth.",
+    OAuthCallback: "Erreur de callback OAuth.",
+    OAuthCreateAccount: "Impossible de créer le compte OAuth.",
+    EmailCreateAccount: "Impossible de créer le compte email.",
+    Callback: "Erreur de callback.",
+    OAuthAccountNotLinked: "Ce compte est déjà lié à une autre méthode.",
+    EmailSignin: "Erreur lors de l'envoi de l'email.",
+    CredentialsSignin: "Identifiants invalides.",
+    default: "Une erreur est survenue.",
+  };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center px-4">
-      {/* Logo */}
-      <Link href="/" className="mb-8 block">
-        <span
-          className="text-2xl font-black tracking-tight"
-          style={{
-            background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f59e0b 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
-          Voix
-        </span>
-      </Link>
-
-      {/* Card */}
-      <div className="w-full max-w-[400px] bg-white rounded-2xl border border-gray-100 shadow-sm p-8 animate-fade-up">
-        <h1 className="text-xl font-bold tracking-tight mb-1">Welcome back</h1>
-        <p className="text-sm text-gray-500 mb-6">Sign in to your Voix account</p>
-
-        {/* Error banner */}
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        {/* Google OAuth */}
-        <button
-          onClick={handleGoogle}
-          disabled={!!loading}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 mb-4"
-        >
-          {loading === 'google' ? (
-            <span className="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
-          Continue with Google
-        </button>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-xs text-gray-400 font-medium">or</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-
-        {/* Email form */}
-        <form onSubmit={handleEmail} className="flex flex-col gap-3">
-          <div>
-            <label className="label">Email</label>
-            <input
-              type="email"
-              className="input"
-              placeholder="jane@company.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="label mb-0">Password</label>
-              <Link href="/auth/forgot-password" className="text-xs text-violet-600 hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <input
-              type="password"
-              className="input"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={!!loading || !email || !password}
-            className="w-full btn-primary py-2.5 text-sm mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading === 'email' ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Signing in…
-              </span>
-            ) : (
-              'Sign in →'
-            )}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-5">
-          Don&apos;t have an account?{' '}
-          <Link href="/auth/signup" className="text-violet-600 font-medium hover:underline">
-            Start free trial
-          </Link>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold text-white tracking-tight">
+          Connexion
+        </h1>
+        <p className="text-white/40">
+          Bienvenue sur VOIX. Connectez-vous pour accéder à votre dashboard.
         </p>
       </div>
 
-      <p className="mt-8 text-xs text-gray-400 text-center">
-        By signing in, you agree to our{' '}
-        <Link href="/terms" className="underline hover:text-gray-600">Terms</Link>{' '}
-        and{' '}
-        <Link href="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>.
-      </p>
+      {/* Error alert */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200 text-sm"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
+            <div>
+              <div className="font-medium mb-1">Erreur de connexion</div>
+              {errorMessages[error] || errorMessages.default}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success message */}
+      <AnimatePresence>
+        {magicLinkSent && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 text-sm"
+          >
+            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" />
+            <div>
+              <div className="font-medium mb-1">Lien envoyé</div>
+              Vérifiez votre boîte mail ({email}) pour le lien de connexion.
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Social login buttons */}
+      <div className="space-y-3">
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          onClick={() => handleSocialSignIn("google")}
+          disabled={!!isLoading}
+          className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-medium py-3.5 rounded-xl hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading === "google" ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Chrome className="w-5 h-5" />
+          )}
+          Continuer avec Google
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          onClick={() => handleSocialSignIn("github")}
+          disabled={!!isLoading}
+          className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 text-white font-medium py-3.5 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading === "github" ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Github className="w-5 h-5" />
+          )}
+          Continuer avec GitHub
+        </motion.button>
+      </div>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-white/10" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-slate-950 px-4 text-white/20 uppercase tracking-wider">
+            Ou par email
+          </span>
+        </div>
+      </div>
+
+      {/* Magic link form */}
+      <form onSubmit={handleMagicLink} className="space-y-4">
+        <div className="relative group">
+          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-indigo-400 transition-colors" />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="vous@entreprise.com"
+            required
+            disabled={magicLinkSent}
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-indigo-500/50 focus:bg-white/10 transition-all disabled:opacity-50"
+          />
+        </div>
+
+        <motion.button
+          type="submit"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          disabled={!!isLoading || magicLinkSent}
+          className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/10"
+        >
+          {isLoading === "magic" ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Envoi en cours...
+            </>
+          ) : (
+            <>
+              Envoyer un lien magique
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </motion.button>
+      </form>
+
+      {/* Footer */}
+      <div className="text-center space-y-4">
+        <p className="text-white/30 text-sm">
+          Pas encore de compte ?{" "}
+          <Link
+            href="/auth/signup"
+            className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
+          >
+            Créer un compte gratuit
+          </Link>
+        </p>
+
+        <p className="text-white/20 text-xs">
+          En vous connectant, vous acceptez nos{" "}
+          <Link
+            href="/terms"
+            className="underline hover:text-white/40 transition-colors"
+          >
+            Conditions
+          </Link>{" "}
+          et{" "}
+          <Link
+            href="/privacy"
+            className="underline hover:text-white/40 transition-colors"
+          >
+            Politique de confidentialité
+          </Link>
+        </p>
+      </div>
     </div>
-  )
+  );
 }
 
-function GoogleIcon() {
+export default function SignInPage() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>
-  )
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
+  );
 }

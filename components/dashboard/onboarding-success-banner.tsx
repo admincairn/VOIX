@@ -21,8 +21,6 @@ export function OnboardingSuccessBanner() {
   }, []);
 
   const handleCopy = () => {
-    // Le code embed sera récupéré depuis le widget créé pendant l'onboarding
-    // Pour l'instant, placeholder
     navigator.clipboard.writeText("<!-- VOIX Widget -->");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
